@@ -8,20 +8,29 @@ const router = express.Router();
 // Get all emergency contacts
 router.get('/', auth, async (req, res) => {
   try {
+    console.log(`🔍 Fetching emergency contacts for user: ${req.user._id}`);
+    
     const contacts = await EmergencyContact.find({ userId: req.user._id })
       .sort({ isPrimary: -1, createdAt: 1 });
+
+    console.log(`✅ Found ${contacts.length} emergency contacts for user ${req.user._id}`);
+    contacts.forEach((contact, index) => {
+      console.log(`   ${index + 1}. ${contact.name} (${contact.phone}) - ${contact.relationship} ${contact.isPrimary ? '[PRIMARY]' : ''}`);
+    });
 
     res.json({
       success: true,
       data: {
-        contacts
+        contacts,
+        count: contacts.length
       }
     });
   } catch (error) {
-    console.error('Get contacts error:', error);
+    console.error('❌ Get contacts error:', error);
     res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
@@ -45,6 +54,12 @@ router.post('/', auth, [
 
     const { name, phone, relationship, isPrimary = false } = req.body;
 
+    console.log(`➕ Adding emergency contact for user: ${req.user._id}`);
+    console.log(`   Name: ${name}`);
+    console.log(`   Phone: ${phone}`);
+    console.log(`   Relationship: ${relationship}`);
+    console.log(`   Is Primary: ${isPrimary}`);
+
     const contact = new EmergencyContact({
       userId: req.user._id,
       name,
@@ -53,13 +68,14 @@ router.post('/', auth, [
       isPrimary
     });
 
-    await contact.save();
+    const savedContact = await contact.save();
+    console.log(`✅ Emergency contact saved successfully with ID: ${savedContact._id}`);
 
     res.status(201).json({
       success: true,
       message: 'Emergency contact added successfully',
       data: {
-        contact
+        contact: savedContact
       }
     });
   } catch (error) {
