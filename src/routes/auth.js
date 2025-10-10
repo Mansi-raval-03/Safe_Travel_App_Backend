@@ -102,7 +102,7 @@ router.post('/signin', authLimiter, [
 
     const { email, password } = req.body;
 
-    // Find user
+    // Find user (removed email verification requirement)
     const user = await User.findOne({ email, isActive: true });
     if (!user || !(await user.validatePassword(password))) {
       return res.status(401).json({
