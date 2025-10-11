@@ -7,7 +7,6 @@ const morgan = require('morgan');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
-
 const connectDB = require('./src/config/database');
 const authRoutes = require('./src/routes/auth');
 const userRoutes = require('./src/routes/user');
@@ -19,9 +18,11 @@ const autoSOSRoutes = require('./src/routes/autoSOS');
 const mapRoutes = require('./src/routes/map');
 const notificationRoutes = require('./src/routes/notifications');
 const otpRoutes = require('./src/routes/otp');
+const tripEventsRoutes = require('./src/routes/tripEvents');
 const errorHandler = require('./src/middleware/errorHandler');
 const socketHandler = require('./src/services/socketHandler');
 const sosMonitoringJob = require('./src/services/sosMonitoringJob');
+const tripMonitoringService = require('./src/services/tripMonitoringService');
 
 const app = express();
 const server = http.createServer(app);
@@ -84,6 +85,7 @@ app.use('/api/v1/auto-sos', autoSOSRoutes);
 app.use('/api/v1/map', mapRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/otp', otpRoutes);
+app.use('/api/v1/events', tripEventsRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
@@ -108,6 +110,14 @@ server.listen(PORT, () => {
     console.log('🚨 Auto SOS monitoring system started');
   } catch (error) {
     console.error('❌ Failed to start SOS monitoring:', error);
+  }
+  
+  // Start trip monitoring service
+  try {
+    tripMonitoringService.start();
+    console.log('🚗 Trip monitoring service started');
+  } catch (error) {
+    console.error('❌ Failed to start trip monitoring service:', error);
   }
 });
 
