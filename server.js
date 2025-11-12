@@ -98,27 +98,57 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server 
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`API Base URL: http://localhost:${PORT}/api/v1`);
-  console.log(`Socket.IO is ready for connections`);
-  
-  // Start SOS monitoring jobs
-  try {
-    sosMonitoringJob.startMonitoring();
-    console.log('🚨 Auto SOS monitoring system started');
-  } catch (error) {
-    console.error('❌ Failed to start SOS monitoring:', error);
-  }
-  
-  // Start trip monitoring service
-  try {
-    tripMonitoringService.start();
-    console.log('🚗 Trip monitoring service started');
-  } catch (error) {
-    console.error('❌ Failed to start trip monitoring service:', error);
-  }
-});
+// Start server with EADDRINUSE handling and retry on next port(s)
+function startServer(initialPort, maxRetries = 5) {
+  let attempts = 0;
+  let port = Number(initialPort) || 3000;
+
+  const tryListen = () => {
+    attempts += 1;
+    server.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+      console.log(`API Base URL: http://localhost:${port}/api/v1`);
+      console.log(`Socket.IO is ready for connections`);
+
+      // Start SOS monitoring jobs
+      try {
+        sosMonitoringJob.startMonitoring();
+        console.log('🚨 Auto SOS monitoring system started');
+      } catch (error) {
+        console.error('❌ Failed to start SOS monitoring:', error);
+      }
+
+      // Start trip monitoring service
+      try {
+        tripMonitoringService.start();
+        console.log('🚗 Trip monitoring service started');
+      } catch (error) {
+        console.error('❌ Failed to start trip monitoring service:', error);
+      }
+    });
+
+    server.once('error', (err) => {
+      if (err && err.code === 'EADDRINUSE') {
+        console.warn(`Port ${port} is in use.`);
+        if (attempts <= maxRetries) {
+          port += 1; // try next port
+          console.log(`Trying another port: ${port} (attempt ${attempts}/${maxRetries})`);
+          // small delay before retry
+          setTimeout(() => tryListen(), 300);
+        } else {
+          console.error(`Unable to bind to a free port after ${maxRetries} attempts.`);
+          process.exit(1);
+        }
+      } else {
+        console.error('Server error during listen:', err);
+        process.exit(1);
+      }
+    });
+  };
+
+  tryListen();
+}
+
+startServer(PORT, 10);
 
 module.exports = { app, server, io };
