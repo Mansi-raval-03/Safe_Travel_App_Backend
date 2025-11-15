@@ -19,6 +19,7 @@ const mapRoutes = require('./src/routes/map');
 const notificationRoutes = require('./src/routes/notifications');
 const otpRoutes = require('./src/routes/otp');
 const tripEventsRoutes = require('./src/routes/tripEvents');
+const tripHistoryRoutes = require('./src/routes/trips');
 const errorHandler = require('./src/middleware/errorHandler');
 const socketHandler = require('./src/services/socketHandler');
 const sosMonitoringJob = require('./src/services/sosMonitoringJob');
@@ -86,6 +87,7 @@ app.use('/api/v1/map', mapRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/otp', otpRoutes);
 app.use('/api/v1/events', tripEventsRoutes);
+app.use('/api/v1/trips', tripHistoryRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

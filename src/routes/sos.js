@@ -95,6 +95,11 @@ router.post('/trigger', auth, sosLimiter, [
     sosService.notifyEmergencyContacts(alert, emergencyContacts, req.user)
       .catch(error => console.error('Contact notifications failed:', error));
 
+    // Send push notifications to other app users (async)
+    sosService.notifyPushToAllUsers(alert, req.user)
+      .then(res => console.log('Push notify result:', res))
+      .catch(err => console.error('Push notifications failed:', err));
+
     // Populate contact details for response
     const populatedNotifications = await ContactNotification.find({ alertId: alert._id })
       .populate('contactId', 'name phone relationship');

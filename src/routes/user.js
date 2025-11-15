@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
+const DeviceToken = require('../models/DeviceToken');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -115,4 +116,42 @@ router.put('/settings', auth, [
   }
 });
 
+// Save or update device token for push notifications
+router.post('/device-token', auth, [
+  body('token').isString().notEmpty(),
+  body('platform').optional().isIn(['android', 'ios', 'web', 'unknown'])
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: errors.array()
+      });
+    }
+
+    const { token, platform = 'unknown' } = req.body;
+
+    // Upsert token: if token exists assign to this user, otherwise create
+    await DeviceToken.findOneAndUpdate(
+      { token },
+      { $set: { token, user: req.user._id, platform } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Device token saved successfully'
+    });
+  } catch (error) {
+    console.error('Save device token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;
+

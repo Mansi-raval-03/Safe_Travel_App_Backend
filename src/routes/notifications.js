@@ -3,6 +3,9 @@ const { query } = require('express-validator');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
+const DeviceToken = require('../models/DeviceToken');
+const sosService = require('../services/sosService');
+const User = require('../models/User');
 
 // Mock notifications data
 const mockNotifications = [
@@ -100,6 +103,40 @@ router.put('/:notificationId/read', auth, async (req, res) => {
       success: false,
       message: 'Internal server error'
     });
+  }
+});
+
+// List device tokens (admin / debug) - returns limited info
+router.get('/device-tokens', auth, async (req, res) => {
+  try {
+    const tokens = await DeviceToken.find().limit(200).select('token user platform createdAt updatedAt');
+    res.json({ success: true, data: { tokens } });
+  } catch (error) {
+    console.error('List device tokens error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
+// Trigger a test push to all users (except sender) to validate FCM path
+router.post('/test-push', auth, async (req, res) => {
+  try {
+    // Build a fake alert-like payload
+    const fakeAlert = {
+      _id: 'test-' + Date.now(),
+      location: {
+        latitude: req.body.latitude || 0,
+        longitude: req.body.longitude || 0,
+        address: req.body.address || 'Test Location'
+      },
+      message: req.body.message || 'Test SOS notification',
+      emergencyType: req.body.emergencyType || 'general'
+    };
+
+    const result = await sosService.notifyPushToAllUsers(fakeAlert, req.user);
+    res.json({ success: true, message: 'Test push triggered', data: result });
+  } catch (error) {
+    console.error('Test push error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
 
